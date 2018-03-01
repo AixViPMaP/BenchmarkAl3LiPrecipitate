@@ -1,53 +1,63 @@
 from ipywidgets import widgets
 from IPython.display import display
 
-from functools import wraps
-import inspect
-
 from davpx import DavProxy
+from IpyApp import IpyApp, widget_property
 
-def _widget_(f):
-    @wraps(f)
-    def wrapfunc(self):
-        try:
-            return self.__widgets__[f.__name__]
-        except KeyError:
-            args=[]
-            if len(inspect.getargspec(f).args)>=1:
-                args=[self,]
-            wdgt = f(*args)
-            default_value =  self.__default__.get(f.__name__)
-            if default_value and hasattr(wdgt,'value'):
-                wdgt.value = default_value
-            return self.__widgets__.setdefault(f.__name__, wdgt)
-    return property(wrapfunc)
 
-class BenchmarkAl3Li:
-    def __init__(self, default_value={}):
-        self.__widgets__ = {}
-        self.__default__ = default_value
+
+class BenchmarkAl3Li(IpyApp):
+    @widget_property
+    def wJobPath    ():
+        return widgets.Text(description='Job path', value='SPP1713Benchmarks/Al3Li/OP')
+
+    @widget_property
+    def wKappa():
+        return widgets.FloatText(description='$\kappa$', value=0.01)
+
+    @widget_property
+    def wC11     ():
+        return widgets.FloatText(description='$\mathbb{C}_{11}$',   value=107.11e9)
+
+    @widget_property
+    def wC12     ():
+        return widgets.FloatText(description='$\mathbb{C}_{12}$',   value=62.86e9)
+
+    @widget_property
+    def wC44     ():
+        return widgets.FloatText(description='$\mathbb{C}_{44}$',   value=28.47e9)
+
+    @widget_property
+    def wSubmit     (self):
+        btn = widgets.Button(description='Submit & Start simulation' )
+        btn.on_click(self.submit)
+        return btn
+
+    @widget_property
+    def wConcStep():
+        return widgets.IntText(description='Time step', value=10000)
+
+    @widget_property
+    def btn_plot_conc     (self):
+        btn = widgets.Button(description='Plot concentration profile' )
+        btn.on_click(self.plot_conc)
+        return btn
 
     def showUI(self):
-        tab      = widgets.Accordion(children= (
-            widgets.VBox([ self.wJobPath]),
-            widgets.VBox([self.wKappa,
-                          widgets.Label(value="Elasticity coefficient $\mathbb{C}$ of the matrix phase"),
-                          self.wC11, self.wC12, self.wC44,
-                          self.wSubmit
-                          ])
-        ) )
+        vboxes = (
+            [self.wJobPath],
+            [self.wKappa,
+             widgets.Label(value="Elasticity coefficient $\mathbb{C}$ of the matrix phase"),
+             self.wC11, self.wC12, self.wC44,
+             self.wSubmit ],
+            [self.wConcStep, self.btn_plot_conc]
+        )
 
-        for i, title in enumerate(['Working folder', 'Benchmark parameters']):
-            tab.set_title(i, title )
-
+        tab = self.create_Accordion(['Working folder', 'Benchmark parameters', 'Post-processing'], vboxes)
         display(tab)
 
     def submit(self, *args):
-        params={
-            n: wdgt.value
-            for n, wdgt in self.__widgets__.items()
-            if isinstance(wdgt, widgets.ValueWidget) and n.startswith('w') and hasattr(wdgt, 'value')
-        }
+        params=self.get_widget_values()
         input_cont_el = TEMPLATE_ElasticityInput.format(**params)
         path_el = 'ElasticityInput.opi'
         oc_path_el = 'OP/ProjectInput/' + path_el
@@ -71,7 +81,7 @@ class BenchmarkAl3Li:
         from IPython.core.display import display, HTML
         display(HTML('Please open the <a href="{}">Job folder</a> in a new window.'.format(redirect_url)))
 
-    def postprocessing(self):
+    def plot_conc(self, *args):
         import mayavi, vtk, os
         from mayavi import mlab
         mlab.init_notebook()
@@ -88,13 +98,14 @@ class BenchmarkAl3Li:
 
         # fetch the results
         
-        fname='Composition_00010000.vtk'
+        fname='Composition_{0:08d}.vtk'.format(self.wConcStep.value)
         oc_proj_base = self.wJobPath.value.strip(' /')
 
         oc=DavProxy()
         oc.set_token()
         oc.get(oc_proj_base + '/OP/VTK/'+fname, './' + fname)
         
+        print('File ', fname, 'is successfully fetched.')
         # run mlab pipeline
         
         
@@ -108,34 +119,7 @@ class BenchmarkAl3Li:
         scpx=mlab.pipeline.scalar_cut_plane(r, view_controls=False,plane_orientation='x_axes')
         mlab.pipeline.outline(r)
         col_cp=mlab.scalarbar(scp, title='C(Li)', orientation='vertical')
-        return mlab.gcf() # plot
-
-    @_widget_
-    def wJobPath    ():
-        return widgets.Text(description='Job path', value='SPP1713Benchmarks/Al3Li/OP')
-
-    @_widget_
-    def wKappa():
-        return widgets.FloatText(description='$\kappa$', value=0.01)
-
-    @_widget_
-    def wC11     ():
-        return widgets.FloatText(description='$\mathbb{C}_{11}$',   value=107.11e9)
-
-    @_widget_
-    def wC12     ():
-        return widgets.FloatText(description='$\mathbb{C}_{12}$',   value=62.86e9)
-
-    @_widget_
-    def wC44     ():
-        return widgets.FloatText(description='$\mathbb{C}_{44}$',   value=28.47e9)
-
-    @_widget_
-    def wSubmit     (self):
-        btn = widgets.Button(description='Submit & Start simulation' )
-        btn.on_click(self.submit)
-        return btn
-
+        display(mlab.gcf())  # plot
 
 TEMPLATE_ElasticityInput="""
 Mechstate 0: Free boundaries
