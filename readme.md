@@ -1,4 +1,6 @@
-This document describes the steps to run simulations of the chemo-mechanical coupled benchmark problem using a cloud computing service [AixViPMaP](http://aixvipmap.de/). This service is only open to registered users. For registration please send an informal email with your name, organization and contact information to aixvipmap@icme.rwth-aachen.de.
+This document describes the steps to run simulations of the chemo-mechanical coupled benchmark problem using a cloud computing service [AixViPMaP](http://aixvipmap.de/). This service is only open to registered users. 
+
+[Register a new user account](https://docs.google.com/forms/d/e/1FAIpQLSdwRMJt3CijsHDY-qJRsG6s_kgecWXOZWFiOCeh-PENFMKtgA/viewform?usp=pp_url&entry.595615995=Demo&entry.2005620554&entry.1045781291&entry.1381675695&entry.1065046570&entry.1166974658&entry.839337160).
 
 1. Upload the entire folder "Template_Benchmark_Al3Li" to the cloud and put it under your home folder (using Firefox in Windows, simply drag and drop the folder from file explorer to the webpage). You may rename the folder to "Benchmark_Job1" so that it is easier to remember. Click into the folder to make sure every file is uploaded successfully.
 ![](./images/readme_1.png)
